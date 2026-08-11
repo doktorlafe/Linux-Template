@@ -293,3 +293,4 @@ The ARM variants can be built on x86_64 hardware and vice versa using lscr.io/li
 
 docker run --rm --privileged lscr.io/linuxserver/qemu-static --reset
 Once registered you can define the dockerfile to use with -f Dockerfile.aarch64.
+Ahoj
