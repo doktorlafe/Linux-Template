@@ -1,0 +1,51 @@
+services:
+
+  unifi-db:
+    image: mongo:7.0
+    container_name: unifi-db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: StrongRootPassword    # change this
+    volumes:
+      - /opt/docker-data/unifi/mongo:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - unifi-net
+
+  unifi-network-application:
+    image: lscr.io/linuxserver/unifi-network-application:latest
+    container_name: unifi-network-application
+    depends_on:
+      unifi-db:
+        condition: service_healthy
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Prague                     # change to your timezone if needed
+      MONGO_USER: unifi
+      MONGO_PASS: UnifiAppPassword          # must match init-mongo.js
+      MONGO_HOST: unifi-db
+      MONGO_PORT: 27017
+      MONGO_DBNAME: unifi
+      MONGO_AUTHSOURCE: admin
+    volumes:
+      - /opt/docker-data/unifi/config:/config
+    ports:
+      - "8443:8443"
+      - "8080:8080"
+      - "3478:3478/udp"
+      - "10001:10001/udp"
+    restart: unless-stopped
+    networks:
+      - unifi-net
+
+networks:
+  unifi-net:
+    driver: bridge

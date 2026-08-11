@@ -1,0 +1,498 @@
+╭─── Claude Code v2.1.227 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                    Welcome back!                   │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Fixed feature flags be… │
+│                                                    │ Fixed every Bash comma… │
+│           Sonnet 4.6 · API Usage Billing           │ Fixed `/tui` bringing … │
+│ ~\_VS-CODE\linux-vps-project\tests\unifi-controll… │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ /init                                                                         
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● This directory contains only a single reference/notes file (unifi.md) — it's
+  not a software project with build scripts, tests, or source code. It's a
+  working notes folder for setting up UniFi Network Application on Docker.
+
+  I'll create a CLAUDE.md that captures the relevant context for working in this
+  directory.
+
+● Write(CLAUDE.md)
+  ⎿  Wrote 34 lines to CLAUDE.md
+      1 # CLAUDE.md
+      3 This file provides guidance to Claude Code (claude.ai/code) when 
+        working with code in this repository.
+      4 
+      6 
+      7 This directory is a notes and configuration workspace for deployi
+        here is planning and config authoring — not executed locally (the
+         user's machine is Windows; deployment happens on a remote Linux 
+        server).
+      9 ## Key Context
+     … +45 lines (ctrl+o to expand)
+
+● Created CLAUDE.md with the key context a future Claude instance needs: the
+  deployment goal, why the two-container split is mandatory, the MongoDB
+  first-run-only caveat, and the AVX/version pinning gotchas. Nothing was
+  invented — all details came from unifi.md.
+
+✻ Brewed for 27s
+
+❯ /theme                                                                        
+  ⎿  Theme set to light-daltonized
+
+❯ /model 
+  ⎿  Kept model as Sonnet 4.6
+
+❯ /plan create resolution.md and put there how it should be made. thanks        
+  ⎿  Enabled plan mode
+
+● Entered plan mode
+  Claude is now exploring and designing an implementation approach.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~\.claude\plans\pure-nibbling-pillow.md · /plan to edit
+     Plan: Create resolution.md for UniFi + MongoDB Docker Setup
+
+     Context
+
+     The user attempted to deploy UniFi Network Application with MongoDB but
+     combined them incorrectly, resulting in a "wrong password" connection
+     error. The goal is to produce a clear, correct resolution.md file they can
+     follow on their Linux VPS — no commands will be executed locally.
+
+     What resolution.md will contain
+
+     1. File layout
+
+     Two files to create on the VPS:
+     - docker-compose.yml — both services with a shared network
+     - init-mongo.sh — MongoDB user init script
+
+     2. init-mongo.sh (verbatim from linuxserver docs)
+
+     The script uses mongosh or mongo depending on version, reads env vars, and
+     creates the unifi user with dbOwner on four databases: unifi, unifi_stat,
+     unifi_audit, unifi_restore.
+
+     3. docker-compose.yml
+
+     Two services:
+     - unifi-db: mongo:7.0 (pinned), env vars for root and app credentials,
+     volume for /data/db, init script mounted as :ro at
+     /docker-entrypoint-initdb.d/init-mongo.sh
+     - unifi-network-application:
+     lscr.io/linuxserver/unifi-network-application:latest, env vars pointing
+     MONGO_HOST to unifi-db, all required ports
+
+     Both share a user-defined bridge network so the app can resolve unifi-db by
+     name.
+
+     4. Deployment steps (ordered)
+
+     1. Create directory structure and files
+     2. docker-compose up -d unifi-db — start DB first, let init script run
+     3. docker-compose up -d unifi-network-application — start app after DB is
+     healthy
+     4. Access UI at https://<vps-ip>:8443
+
+     5. Pitfalls section (root cause of original error + other gotchas)
+
+     - Init script only runs on a clean /data/db — if DB was started without it,
+     must wipe volume and restart
+     - MONGO_AUTHSOURCE=admin is required (not the app db name)
+     - Env vars are only read on UniFi's first run — changing them later
+     requires clean /config
+     - MongoDB version must be pinned; never use latest
+     - Port 8080 must not be remapped
+     - Device adoption requires setting Inform Host in Settings > System >
+     Advanced
+
+     Files to create
+
+     - C:\Users\cu1849\_VS-CODE\linux-vps-project\tests\unifi-controller\resolut
+     ion.md
+
+● Write(resolution.md)
+  ⎿  Wrote 176 lines to resolution.md
+       1 # UniFi Network Application — Correct Docker Setup
+       2 
+       4 
+       5 The "wrong password" error happens when MongoDB and the UniFi ap
+         p are misconfigured together — usually because:
+          `/data/db`)
+       7 - `MONGO_AUTHSOURCE` was set incorrectly
+       8 - The env vars were changed after UniFi's first run (they are on
+       9 
+      10 ---
+     … +182 lines (ctrl+o to expand)
+
+❯ ok so i gave you docker-compose.yml.sample to see what i had                  
+
+● resolution.md is created. Let me read the sample file you shared so I can
+  compare and update the resolution if needed.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Good — this sample is actually pretty well structured. A few things to note
+  vs. what I wrote in resolution.md:
+
+  1. It uses a healthcheck on unifi-db and depends_on: condition: 
+  service_healthy — this is better than the sleep 10 I suggested, so the
+  resolution should use this pattern.
+  2. It mounts init-mongo.js (JavaScript), not init-mongo.sh (bash) — I need to
+  update the resolution accordingly.
+  3. It uses absolute volume paths (/opt/docker-data/unifi/...) instead of
+  relative ones.
+  4. MONGO_PASS: admin is a weak placeholder — I should note this needs
+  changing.
+
+  Let me update resolution.md to align with this better pattern:
+
+● Write(resolution.md)
+  ⎿  Added 84 lines, removed 85 lines
+        6  - The init script never ran (MongoDB was started without a cle
+           an `/data/db`)
+        7  - `MONGO_AUTHSOURCE` was set incorrectly
+        8  - The env vars were changed after UniFi's first run (they are 
+           only read once)
+        9 +- `MONGO_USER` / `MONGO_PASS` in the init script don't match w
+          +hat the UniFi container expects                               
+       10  
+       11  ---
+       12  
+       13  ## File Structure on the VPS
+       14  
+       15  ```
+       15 -~/unifi/                                                      
+       16 +/opt/docker-data/unifi/                                       
+       17 +├── mongo/          ← MongoDB data volume                     
+       18 +└── config/         ← UniFi config volume                     
+       19 +                                                              
+       20 +~/unifi/            ← your compose project directory          
+       21  ├── docker-compose.yml
+       17 -├── init-mongo.sh                                             
+       18 -├── db-data/          ← MongoDB data (auto-created)           
+       19 -└── unifi-data/       ← UniFi config (auto-created)           
+       22 +└── init-mongo.js                                             
+       23  ```
+       24  
+       25 +Create the data directories first:                            
+       26 +                                                              
+       27 +```bash                                                       
+       28 +sudo mkdir -p /opt/docker-data/unifi/mongo                    
+       29 +sudo mkdir -p /opt/docker-data/unifi/config                   
+       30 +```                                                           
+       31 +                                                              
+       32  ---
+       33  
+       24 -## Step 1 — Create `init-mongo.sh`                            
+       34 +## Step 1 — Create `init-mongo.js`                            
+       35  
+       26 -This script runs once when MongoDB first starts on a clean vol
+          -ume. It creates the dedicated UniFi database user.            
+       36 +This JavaScript file runs **once** when MongoDB starts on a **
+          +clean** `/data/db`. It creates the dedicated UniFi user with t
+          +he correct roles.                                             
+       37  
+       28 -```bash                                                       
+       29 -#!/bin/bash                                                   
+       38 +> **Important:** The credentials here must exactly match `MONG
+          +O_USER` and `MONGO_PASS` in your `docker-compose.yml`.        
+       39  
+       31 -if which mongosh > /dev/null 2>&1; then                       
+       32 -  mongo_init_bin='mongosh'                                    
+       33 -else                                                          
+       34 -  mongo_init_bin='mongo'                                      
+       35 -fi                                                            
+       36 -"${mongo_init_bin}" <<EOF                                     
+       37 -use ${MONGO_AUTHSOURCE}                                       
+       38 -db.auth("${MONGO_INITDB_ROOT_USERNAME}", "${MONGO_INITDB_ROOT_
+          -PASSWORD}")                                                   
+       40 +```js                                                         
+       41 +db = db.getSiblingDB("admin");                                
+       42 +db.auth("root", "StrongRootPassword");   // must match MONGO_I
+          +NITDB_ROOT_PASSWORD                                           
+       43 +                                                              
+       44 +db = db.getSiblingDB("unifi");                                
+       45  db.createUser({
+       40 -  user: "${MONGO_USER}",                                      
+       41 -  pwd: "${MONGO_PASS}",                                       
+       46 +  user: "unifi",                                              
+       47 +  pwd: "CHANGE_ME_UNIFI_PASS",           // must match MONGO_P
+          +ASS in unifi-network-application                              
+       48    roles: [
+       43 -    "clusterMonitor",                                         
+       44 -    { db: "${MONGO_DBNAME}", role: "dbOwner" },               
+       45 -    { db: "${MONGO_DBNAME}_stat", role: "dbOwner" },          
+       46 -    { db: "${MONGO_DBNAME}_audit", role: "dbOwner" },         
+       47 -    { db: "${MONGO_DBNAME}_restore", role: "dbOwner" }        
+       49 +    { role: "dbOwner", db: "unifi" },                         
+       50 +    { role: "dbOwner", db: "unifi_stat" },                    
+       51 +    { role: "dbOwner", db: "unifi_audit" },                   
+       52 +    { role: "dbOwner", db: "unifi_restore" },                 
+       53 +    { role: "clusterMonitor", db: "admin" }                   
+       54    ]
+       49 -})                                                            
+       50 -EOF                                                           
+       55 +});                                                           
+       56  ```
+       57  
+       53 -Make it executable after creating it:                         
+       54 -                                                              
+       55 -```bash                                                       
+       56 -chmod +x ~/unifi/init-mongo.sh                                
+       57 -```                                                           
+       58 -                                                              
+       58  ---
+       59  
+       60  ## Step 2 — Create `docker-compose.yml`
+       61  
+       63 -Choose strong passwords for `MONGO_INITDB_ROOT_PASSWORD` and `
+          -MONGO_PASS`, and keep them consistent between the two services
+          -.                                                             
+       62 +Replace `StrongRootPassword` and `CHANGE_ME_UNIFI_PASS` with r
+          +eal passwords. Keep them consistent between the two services. 
+       63  
+       64  ```yaml
+       65  services:
+       66  
+       67    unifi-db:
+       69 -    image: docker.io/mongo:7.0        # pin version — never us
+          -e latest                                                      
+       68 +    image: mongo:7.0                    # pin version — never 
+          +use latest                                                    
+       69      container_name: unifi-db
+       70      environment:
+       72 -      - MONGO_INITDB_ROOT_USERNAME=root                       
+       73 -      - MONGO_INITDB_ROOT_PASSWORD=CHANGE_ME_ROOT_PASS        
+       74 -      - MONGO_USER=unifi                                      
+       75 -      - MONGO_PASS=CHANGE_ME_UNIFI_PASS                       
+       76 -      - MONGO_DBNAME=unifi                                    
+       77 -      - MONGO_AUTHSOURCE=admin                                
+       71 +      MONGO_INITDB_ROOT_USERNAME: root                        
+       72 +      MONGO_INITDB_ROOT_PASSWORD: StrongRootPassword    # chan
+          +ge this                                                       
+       73      volumes:
+       79 -      - ./db-data:/data/db                                    
+       80 -      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo
+          -.sh:ro                                                        
+       74 +      - /opt/docker-data/unifi/mongo:/data/db                 
+       75 +      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo
+          +.js:ro                                                        
+       76      restart: unless-stopped
+       82 -    networks:                                                 
+       83 -      - unifi-net                                             
+       77 +    healthcheck:                                              
+       78 +      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminC
+          +ommand('ping').ok"]                                           
+       79 +      interval: 30s                                           
+       80 +      timeout: 10s                                            
+       81 +      retries: 5                                              
+       82 +      start_period: 60s                                       
+       83  
+       84    unifi-network-application:
+       85      image: lscr.io/linuxserver/unifi-network-application:lates
+           t
+       86      container_name: unifi-network-application
+       87      depends_on:
+       89 -      - unifi-db                                              
+       88 +      unifi-db:                                               
+       89 +        condition: service_healthy      # waits for MongoDB to
+          + be ready                                                     
+       90      environment:
+       91 -      - PUID=1000                                             
+       92 -      - PGID=1000                                             
+       93 -      - TZ=Europe/Warsaw             # set your timezone      
+       94 -      - MONGO_USER=unifi                                      
+       95 -      - MONGO_PASS=CHANGE_ME_UNIFI_PASS   # must match unifi-d
+          -b above                                                       
+       96 -      - MONGO_HOST=unifi-db               # service name, not 
+          -an IP                                                         
+       97 -      - MONGO_PORT=27017                                      
+       98 -      - MONGO_DBNAME=unifi                                    
+       99 -      - MONGO_AUTHSOURCE=admin                                
+       91 +      PUID: 1000                                              
+       92 +      PGID: 1000                                              
+       93 +      TZ: Europe/Warsaw                 # set your timezone   
+       94 +      MONGO_USER: unifi                                       
+       95 +      MONGO_PASS: CHANGE_ME_UNIFI_PASS  # must match init-mong
+          +o.js                                                          
+       96 +      MONGO_HOST: unifi-db              # service name, not an
+          + IP                                                           
+       97 +      MONGO_PORT: 27017                                       
+       98 +      MONGO_DBNAME: unifi                                     
+       99 +      MONGO_AUTHSOURCE: admin                                 
+      100      volumes:
+      101 -      - ./unifi-data:/config                                  
+      101 +      - /opt/docker-data/unifi/config:/config                 
+      102      ports:
+      103 -      - 8443:8443       # web UI (HTTPS)                      
+      104 -      - 8080:8080       # device communication — do NOT remap 
+      105 -      - 3478:3478/udp   # STUN                                
+      106 -      - 10001:10001/udp # AP discovery                        
+      107 -      - 1900:1900/udp   # optional: L2 controller discovery   
+      108 -      - 8843:8843       # optional: guest portal HTTPS        
+      109 -      - 8880:8880       # optional: guest portal HTTP         
+      103 +      - "8443:8443"       # web UI (HTTPS)                    
+      104 +      - "8080:8080"       # device communication — do NOT rema
+          +p this port                                                   
+      105 +      - "3478:3478/udp"   # STUN                              
+      106 +      - "10001:10001/udp" # AP discovery                      
+      107      restart: unless-stopped
+      111 -    networks:                                                 
+      112 -      - unifi-net                                             
+      113 -                                                              
+      114 -networks:                                                     
+      115 -  unifi-net:                                                  
+      116 -    driver: bridge                                            
+      108  ```
+      109  
+      110  ---
+      111  
+      121 -## Step 3 — Deploy (order matters)                            
+      112 +## Step 3 — Deploy                                            
+      113  
+      114  ```bash
+      115  cd ~/unifi
+      116  
+      126 -# Start MongoDB first so the init script runs before UniFi con
+          -nects                                                         
+      127 -docker compose up -d unifi-db                                 
+      128 -                                                              
+      129 -# Wait ~10 seconds for MongoDB to finish initialising         
+      130 -sleep 10                                                      
+      131 -                                                              
+      132 -# Start UniFi                                                 
+      133 -docker compose up -d unifi-network-application                
+      117 +# Start both — UniFi will wait automatically until MongoDB is 
+          +healthy                                                       
+      118 +docker compose up -d                                          
+      119  ```
+      120  
+      136 -Check logs to confirm both started cleanly:                   
+      121 +Check logs:                                                   
+      122  
+      123  ```bash
+      124  docker logs unifi-db --tail 30
+     ...
+      127  
+      128  Access the web UI at: **`https://<your-vps-ip>:8443`**
+      129  
+      145 -Use the first-run wizard to finish setup (or restore a backup)
+          -.                                                             
+      130 +Use the first-run wizard to finish setup (or restore a backup 
+          +here).                                                        
+      131  
+      132  ---
+      133  
+     ...
+      140  3. Check the **Override** box
+      141  4. Save
+      142  
+      158 -For manual adoption via SSH:                                  
+      143 +For manual adoption via SSH on the device:                    
+      144  
+      145  ```bash
+      146  ssh ubnt@<AP-IP>          # default password: ubnt
+     ...
+      149  
+      150  ---
+      151  
+      152 +## If You Already Started MongoDB Without the Init Script     
+      153 +                                                              
+      154 +The init script only runs on a **clean** volume. If you starte
+          +d MongoDB before mounting `init-mongo.js`, you must reset:    
+      155 +                                                              
+      156 +```bash                                                       
+      157 +docker compose down                                           
+      158 +sudo rm -rf /opt/docker-data/unifi/mongo/*                    
+      159 +docker compose up -d                                          
+      160 +```                                                           
+      161 +                                                              
+      162 +This wipes the MongoDB data. If you also have UniFi config dat
+          +a you want to keep, you can restore it from a backup through t
+          +he first-run wizard.                                          
+      163 +                                                              
+      164 +---                                                           
+      165 +                                                              
+      166  ## Common Pitfalls
+      167  
+      168  | Symptom | Cause | Fix |
+      169  |---|---|---|
+      171 -| "Wrong password" on startup | Init script never ran or ran w
+          -ithout correct env vars | Wipe `db-data/`, restart `unifi-db` 
+          -with init script mounted |                                    
+      172 -| Init script had no effect | `db-data/` was not empty when co
+          -ntainer first started | Stop DB, `rm -rf ./db-data/*`, start a
+          -gain |                                                        
+      173 -| UniFi ignores changed `MONGO_*` vars | These are only read o
+          -n UniFi's **first run** | Wipe `unifi-data/` and reconnect to 
+          -DB |                                                          
+      174 -| Devices can't adopt | Inform Host still points to internal D
+          -ocker IP | Set Inform Host override in Settings (Step 4) |    
+      175 -| MongoDB won't start | CPU lacks AVX (Celeron/Pentium pre-Tig
+          -er-Lake) | Use `mongo:4.4` instead of 7.0 |                   
+      176 -| Port conflict | `8080` remapped on host | Must keep `8080:80
+          -80` — it's hardcoded in UniFi |                               
+      170 +| "Wrong password" on startup | Init script never ran, or pass
+          +words mismatched | Wipe `mongo/`, restart — see section above 
+          +|                                                             
+      171 +| Init script ran but user missing | `db-data/` was not empty 
+          +on first start | Same fix: wipe volume, restart |             
+      172 +| UniFi ignores changed `MONGO_*` vars | Only read on first ru
+          +n | Wipe `/opt/docker-data/unifi/config/` too, redo wizard |  
+      173 +| Devices can't adopt | Inform Host still points to internal D
+          +ocker IP | Set Inform Host override (Step 4) |                
+      174 +| MongoDB won't start (x86) | CPU lacks AVX — older Celeron/Pe
+          +ntium | Use `mongo:4.4` instead |                             
+      175 +| Port conflict on `8080` | Another service using it | Free th
+          +e port — UniFi hardcodes `8080` internally |                  
+
+● resolution.md is updated to match your sample. Key improvements over my first
+  draft:
+
+  - Uses init-mongo.js (JavaScript) instead of a bash script — matching your
+  sample
+  - Uses the healthcheck + condition: service_healthy pattern so UniFi waits for
+  MongoDB automatically — no manual sleep needed
+  - Uses absolute volume paths (/opt/docker-data/unifi/...) matching your
+  sample's convention
+  - Added a dedicated section for the "I already started MongoDB without the
+  script" recovery case — that's likely your exact situation right now
+
+✻ Brewed for 1m 41s
+
+❯ ok?                                                                           
+
+● Yes — resolution.md is ready. Follow it top to bottom on your VPS.
+
+  The most likely fix for your current "wrong password" situation is the
+  recovery section at the bottom: stop the containers, wipe the MongoDB volume,
+  and restart so the init script runs clean on an empty database.
+
+✻ Baked for 4s
+
+❯ okay super porovnal jsem svůj compose a tvůj a ano pokud mi to dokážeš        
+  potvrdit tak jdu vyzkoušet ten tvůj                                           
+
+● Ano, potvrďuju — struktura je správná. Než půjdeš spustit, ověř tyto dvě věci:
+
+  1. Hesla musí sedět přesně — v init-mongo.js i v docker-compose.yml musí být
+  stejná hodnota pro MONGO_PASS / pwd. Pokud se liší byť o jedno písmeno,
+  dostaneš stejnou "wrong password" chybu.
+  2. Máš vytvořený init-mongo.js? Tvůj sample na něj odkazuje (./init-mongo.js),
+  ale soubor musí fyzicky existovat ve stejné složce jako docker-compose.yml.
+  Pokud ho ještě nemáš, zkopíruj ho ze sekce "Step 1" v resolution.md.
+
+  Pokud oboje sedí — jdi do toho. Pokud dostaneš chybu, pošli výstup z docker 
+  logs unifi-db --tail 30.
+✻ Crunched for 15s

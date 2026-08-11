@@ -1,0 +1,20 @@
+{
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+
+    // Custom folder/file label decorations via explorer.decorations
+    "workbench.colorCustomizations": {
+        "gitDecoration.ignoredResourceForeground": "#6c6c6c"
+    },
+
+    // Give folders custom icons by renaming them with emoji prefixes
+    // VS Code doesn't support emoji folder names natively,
+    // but we can use the "peacock" color + file icon themes.
+    // Best zero-install approach: use explorer label via these settings:
+
+    "explorer.fileNesting.patterns": {
+        "docker-compose.yml": "docker-compose.*.yml, .env, .env.*",
+        "*.tf": "*.tfvars, .terraform.lock.hcl",
+        "*.sh": "*.log"
+    }
+}
